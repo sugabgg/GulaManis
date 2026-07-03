@@ -94,7 +94,7 @@ func TestTuneRuntimeGCRespectsEnv(t *testing.T) {
 	t.Setenv("GOMEMLIMIT", "off")
 	before := debug.SetGCPercent(150) // capture+set a known value
 	defer debug.SetGCPercent(before)
-	TuneRuntimeGC(400, 90, nil)
+	TuneRuntimeGC(400, 90, NewNullLogger())
 	current := debug.SetGCPercent(before) // reading returns the value left by TuneRuntimeGC
 	require.Equal(t, 150, current, "GOGC env should prevent override")
 }
@@ -104,7 +104,7 @@ func TestTuneRuntimeGCAppliesGCPercent(t *testing.T) {
 	t.Setenv("GOMEMLIMIT", "off")
 	original := debug.SetGCPercent(100)
 	defer debug.SetGCPercent(original)
-	TuneRuntimeGC(300, 0, nil)
+	TuneRuntimeGC(300, 0, NewNullLogger())
 	applied := debug.SetGCPercent(original)
 	require.Equal(t, 300, applied)
 }
