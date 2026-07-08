@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/canopy-network/canopy/lib"
 	"github.com/canopy-network/canopy/lib/codec"
@@ -314,20 +315,27 @@ func entriesByKey(entries [][]byte, keyExtractor func([]byte) (string, error)) (
 	return out, entryMap, nil
 }
 
-func accountEntryKey(entry []byte) (string, error) {
-	field, err := codec.GetRawProtoField(entry, 1) // Account.address
+// entryKeyOrZero extracts field #1 as a map key. In proto3, absent scalar
+// fields represent the zero value on the wire (Pool{Id:0}, Account{Address:nil}),
+// so codec.ErrFieldNotFound is a legal zero-value signal, not a parse error.
+// Real proto-parse errors (invalid tags, buffer overruns) still surface.
+func entryKeyOrZero(entry []byte) (string, error) {
+	field, err := codec.GetRawProtoField(entry, 1)
 	if err != nil {
+		if errors.Is(err, codec.ErrFieldNotFound) {
+			return "", nil
+		}
 		return "", err
 	}
 	return string(field), nil
 }
 
+func accountEntryKey(entry []byte) (string, error) {
+	return entryKeyOrZero(entry) // Account.address
+}
+
 func poolEntryKey(entry []byte) (string, error) {
-	field, err := codec.GetRawProtoField(entry, 1) // Pool.id
-	if err != nil {
-		return "", err
-	}
-	return string(field), nil
+	return entryKeyOrZero(entry) // Pool.id
 }
 
 func changedBlobKeys(current, previous map[string][]byte) (map[string]struct{}, map[string]struct{}) {
